@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('Build') {
             steps {
-                git 'https://github.com/Sushmaa123/dynamic_application'
+                git 'https://github.com/Ankitha-aa1/mern-application.git'
             }
         }
         stage('Run Docker Compose') {
