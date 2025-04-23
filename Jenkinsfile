@@ -15,7 +15,7 @@ pipeline {
         }
         stage ('sonar code analysis') {
             steps {
-                withSonarQubeEnv('sonar-server') {
+                withSonarQubeEnv(credentialsId: 'sonar-cred') {
                sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=mern-app \
                -Dsonar.projectKey=mern_application'''
                 }
@@ -44,7 +44,7 @@ pipeline {
     post {
         always {
             echo 'slack Notification.'
-            slackSend channel: '#jenkins-team',
+            slackSend channel: '#jenkinsapp',
             color: COLOR_MAP [currentBuild.currentResult],
             message: "*${currentBuild.currentResult}:* Job ${env.JOB_NAME} build ${env.BUILD_NUMBER} \n More info at: ${env.BUILD_URl}"
             
