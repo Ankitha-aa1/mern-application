@@ -1,53 +1,58 @@
 def COLOR_MAP = [
     'SUCCESS': 'good',
     'FAILURE': 'danger'
-    ]
+]
+
 pipeline {
     agent any
+
     environment {
-        SCANNER_HOME = tool 'sonar-scanner'
+        SCANNER_HOME = tool 'sonar-scanner' // Name must match Jenkins tool config
     }
+
     stages {
-        stage('git checkout') {
+        stage('Git Checkout') {
             steps {
                 git 'https://github.com/Ankitha-aa1/mern-application.git'
             }
         }
-        stage ('sonar code analysis') {
+
+        stage('SonarQube Code Analysis') {
             steps {
-                withSonarQubeEnv(credentialsId: 'sonar-cred') {
-               sh ''' $SCANNER_HOME/bin/sonar-scanner -Dsonar.projectName=mern-app \
-               -Dsonar.projectKey=mern_application'''
+                withSonarQubeEnv(installationName: 'sonar-server', credentialsId: 'sonar-cred') {
+                    sh '''$SCANNER_HOME/bin/sonar-scanner \
+                        -Dsonar.projectKey=mern_application \
+                        -Dsonar.projectName=mern-app'''
                 }
             }
         }
-        stage('Docker Compose') {
+
+        stage('Docker Compose Up') {
             steps {
-                script{
-                    sh 'docker-compose up -d'
-                }
+                sh 'docker-compose up -d'
             }
         }
-        stage('docker push') {
+
+        stage('Docker Push to DockerHub') {
             steps {
-                script {
-                    withDockerRegistry(credentialsId: 'docker-cred') {
-                       sh 'docker tag mern-app-frontend sushmaagowdaa/mern-app-frontend'
-                       sh 'docker tag mern-app-backend sushmaagowdaa/mern-app-backend'
-                       sh 'docker push sushmaagowdaa/mern-app-frontend'
-                       sh 'docker push sushmaagowdaa/mern-app-backend' 
-                    }
+                withDockerRegistry(credentialsId: 'docker-cred') {
+                    sh '''
+                        docker tag mern-application-frontend your-dockerhub-username/mern-application-frontend
+                        docker tag mern-application-backend your-dockerhub-username/mern-application-backend
+                        docker push your-dockerhub-username/mern-application-frontend
+                        docker push your-dockerhub-username/mern-application-backend
+                    '''
                 }
             }
         }
     }
+
     post {
         always {
-            echo 'slack Notification.'
+            echo 'Sending Slack Notification...'
             slackSend channel: '#jenkinsapp',
-            color: COLOR_MAP [currentBuild.currentResult],
-            message: "*${currentBuild.currentResult}:* Job ${env.JOB_NAME} build ${env.BUILD_NUMBER} \n More info at: ${env.BUILD_URl}"
-            
+                color: COLOR_MAP[currentBuild.currentResult],
+                message: "*${currentBuild.currentResult}*: Job *${env.JOB_NAME}* Build #${env.BUILD_NUMBER}\nDetails: ${env.BUILD_URL}"
         }
     }
 }
