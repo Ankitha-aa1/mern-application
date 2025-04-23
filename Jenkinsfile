@@ -7,7 +7,7 @@ pipeline {
     agent any
 
     environment {
-        SCANNER_HOME = tool 'sonar-scanner' // Name must match Jenkins tool config
+        SCANNER_HOME = tool 'sonar-scanner' 
     }
 
     stages {
@@ -19,10 +19,15 @@ pipeline {
 
         stage('SonarQube Code Analysis') {
             steps {
-                withSonarQubeEnv(installationName: 'sonar-server', credentialsId: 'sonar-cred') {
-                    sh '''$SCANNER_HOME/bin/sonar-scanner \
+                withSonarQubeEnv('sonar-server') {
+                    sh ''' 
+                        $SCANNER_HOME/bin/sonar-scanner \
                         -Dsonar.projectKey=mern_application \
-                        -Dsonar.projectName=mern-app'''
+                        -Dsonar.projectName=mern-app \
+                        -Dsonar.sources=. \
+                        -Dsonar.host.url=http://localhost:9000 \
+                        -Dsonar.login=<SONAR_TOKEN> 
+                    '''
                 }
             }
         }
@@ -35,7 +40,7 @@ pipeline {
 
         stage('Docker Push to DockerHub') {
             steps {
-                withDockerRegistry(credentialsId: 'docker-cred') {
+                withDockerRegistry(url: 'https://index.docker.io/v1/', credentialsId: 'docker-cred') {
                     sh '''
                         docker tag mern-application-frontend your-dockerhub-username/mern-application-frontend
                         docker tag mern-application-backend your-dockerhub-username/mern-application-backend
@@ -49,10 +54,12 @@ pipeline {
 
     post {
         always {
-            echo 'Sending Slack Notification...'
-            slackSend channel: '#jenkinsapp',
+            slackSend(
+                channel: '#jenkinsapp',
                 color: COLOR_MAP[currentBuild.currentResult],
-                message: "*${currentBuild.currentResult}*: Job *${env.JOB_NAME}* Build #${env.BUILD_NUMBER}\nDetails: ${env.BUILD_URL}"
+                message: "*${currentBuild.currentResult}:* Job ${env.JOB_NAME} build #${env.BUILD_NUMBER}\nMore info: ${env.BUILD_URL}"
+            )
         }
     }
 }
+
